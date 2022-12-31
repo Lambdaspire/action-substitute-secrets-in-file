@@ -112,7 +112,7 @@ jobs:
       - run: cat some/subfolder/app.env
 ```
 
-In GitHub Actions logs, you will see the file contents outputted with `*` asterisks in replace of the secrets.
+In GitHub Actions logs, you will see the file contents outputted with `*` asterisks in place of the secrets.
 
 Typically, though, you won't simply log the contents. You'll actually use them for something valuable...
 
