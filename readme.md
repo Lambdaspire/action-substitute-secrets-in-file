@@ -95,7 +95,7 @@ jobs:
           secretsJson: ${{ toJSON(secrets) }}
       
       - name: Replace some/subfolder/app.env, into a new file
-        uses: Lambdaspire/action-substitute-secrets-in-file@v3
+        uses: Lambdaspire/action-substitute-secrets-in-file@v1.0.0
         with:
           file: some/subfolder/app.env
           output: some/subfolder/app.env.replaced
