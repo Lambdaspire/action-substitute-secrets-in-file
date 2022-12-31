@@ -1,0 +1,16 @@
+{
+  "name": "secretsubstitutionaction",
+  "version": "1.0.0",
+  "description": "",
+  "main": "substitute.js",
+  "scripts": {
+    "build": "ncc build src/index.js --license licenses.txt"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1"
+  }
+}

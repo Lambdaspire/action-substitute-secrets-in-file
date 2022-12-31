@@ -1,0 +1,13 @@
+name: Substitute Secrets into Tokenised File
+description: Substitute GitHub Secrets into a File, matching on a specified Token format.
+author: Skylark @ Lambdaspire
+inputs:
+  secretsJson:
+    required: true
+    description: JSON representation of the secrets.
+runs:
+  using: node16
+  main: dist/index.js
+branding:
+  icon: dollar-sign
+  color: gray-dark
