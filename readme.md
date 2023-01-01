@@ -2,118 +2,85 @@
 
 Substitute GitHub Secrets into a File, matching on a specified Token format.
 
-i.e. If you have these GitHub Secrets:
-- TEST = ABC123
-- PREFERRED_CURRENCY = BITCOIN
-
-You can substitute their values into files containing tokenised symbols like `${TEST}`, rather than listing them out inline - one by one - all over the place.
-
-i.e. Stop repeating YAML in your GitHub actions like this:
-
-```yaml
-env:
-  MY_SECRET: ${{ secrets.MY_SECRET }}
-  MY_OTHER_SECRET: ${{ secrets.MY_SECRET }}
-  ETC: ${{ secrets.ETC }}
-  AD_NAUSEAM: ${{ secrets.MAKE_IT_STOP }}
-```
-
-and just commit config files to source control like this:
+Assume we have a source-controlled file `config.json` like so:
 
 ```json
 {
-    "wow": "${WOW}",
-    "so": {
-        "much": "${BETTER}"
+    "ConnectionString": "${CONNECTIONSTRING}",
+    "Preferences": {
+        "SomeFixedValue": "Always the same",
+        "Currency": "${PREFERENCES_CURRENCY}"
     },
-    "simply-amazing": "${I_KNOW_RIGHT}"
+    ...
 }
 ```
 
-![Noice](https://media0.giphy.com/media/yJFeycRK2DB4c/200w.gif?cid=6c09b952kg6svgzl5yjrfyordac185891yug766f29gi7riu&rid=200w.gif&ct=g)
+We want to manage `CONNECTIONSTRING` and `PREFERENCES_CURRENCY` (and potentially a hundred more configuration values) via GitHub Secrets with matching names. We do not want to list them out manually in all of our Workflow YAML files and evaluate a series of `${{ secrets.NAME }}` expressions whenever we want to use them. Instead, we want to bulk-replace them succinctly.
 
-## Important
+With this GitHub Action, we can do that.
 
-The main thing that makes this work is passing the `secretsJson` input to the action with a value of `${{ toJSON(secrets) }}`. You must do this.
+**GitHub Secrets**
 
-```yaml
-secretsJson: ${{ toJSON(secrets) }}
+```
+CONNECTIONSTRING = Data Source=123.456.789.123,1433;Initial Catalog=MyDB;User ID=MyUser;Password=MyPassword;
+
+PREFERENCES_CURRENCY = Bitcoin
+
+... etc
 ```
 
-This provides the full set of GitHub Secrets to the action as a JSON string, which it then converts to a dictionary internally.
+**Workflow YAML**
 
-Examples below.
+```yaml
+- name: Substitute Secrets
+  uses: Lambdaspire/action-substitute-secrets-in-file@v1.0.0
+  with:
 
-## Examples
+    # The (single) file to target.
+    file: config.json
 
-Example GitHub Secrets:
-- TEST = ABC123
-- PREFERRED_CURRENCY = BITCOIN
+    # The (single) file output.
+    # Optional - defaults to same as ":"file"
+    output: config.json
 
-Example file in repo: **./config.json**<br/>
-*Uses `${TOKEN}` format.*
+    # The token pattern.
+    # Must include the string "TOKEN".
+    # e.g.
+    #   ${TOKEN}
+    #   #{TOKEN}#
+    #   <TOKEN/>
+    #   <!-- TOKEN -->
+    tokenPattern: ${TOKEN}
+
+    # Passes GitHub Secrets as a JSON string to the action.
+    # This MUST be supplied.
+    # It MUST be exactly "${{ toJSON(secrets) }}".
+    secretsJson: ${{ toJSON(secrets) }}
+```
+
+The Action will replace all occurrences of `${TOKEN}` (where TOKEN is any GitHub Secret name) with the associated Secret value. After execution, our `config.json` will look like:
 
 ```json
 {
-  "test": "${TEST}",
-  "preferences": {
-    "currency": "${PREFERRED_CURRENCY}"
-  },
-  "not-secret": "${NOT_SECRET}",
-  "wrong-case": "${test}"
+    "ConnectionString": "Data Source=123.456.789.123,1433;Initial Catalog=MyDB;User ID=MyUser;Password=MyPassword;",
+    "Preferences": {
+        "SomeFixedValue": "Always the same",
+        "Currency": "Bitcoin"
+    },
+    ...
 }
 ```
 
-Another example file in repo: **./some/subfolder/app.env**<br/>
-*Uses `#{TOKEN}#` format.*
+## Notes
 
-```
-TEST = #{TEST}#
-PREF_CUR = #{PREFERRED_CURRENCY}#
-```
+### File Formats
 
-Example GitHub Action: **action.yml**
+The file format needn't be JSON. It can be anything. The Action will simply look inside any nominated file for any string that matches the token format and attempt to substitute it with the corresponding GitHub Secret value.
 
-```yaml
-jobs:
-  
-  example:
-    
-    name: Example
-    runs-on: ubuntu-latest
+### Missing Secrets
 
-    steps:
-    
-      - name: Checkout
-        uses: actions/checkout@v3
-      
-      - name: Replace config.json
-        uses: Lambdaspire/action-substitute-secrets-in-file@v1.0.0
-        with:
-          file: config.json
-          tokenPattern: ${TOKEN}
-          secretsJson: ${{ toJSON(secrets) }}
-      
-      - name: Replace some/subfolder/app.env, into a new file
-        uses: Lambdaspire/action-substitute-secrets-in-file@v1.0.0
-        with:
-          file: some/subfolder/app.env
-          output: some/subfolder/app.env.replaced
-          tokenPattern: '#{TOKEN}#'
-          secretsJson: ${{ toJSON(secrets) }}
-      
-      # File will now contain secrets injected where ${TOKEN} matches on Secret name.
-      - run: cat config.json
+Tokens in a file without any matching Secret will be listed in a warning during execution.
 
-      # File will now contain secrets injected where #{TOKEN}# matches on Secret name.
-      - run: cat some/subfolder/app.env.replaced
+### Output
 
-      # This one will remain unchanged as the output was to a new file, some/subfolder/app.env.replaced
-      - run: cat some/subfolder/app.env
-```
-
-In GitHub Actions logs, you will see the file contents outputted with `*` asterisks in place of the secrets.
-
-Typically, though, you won't simply log the contents. You'll actually use them for something valuable...
-
-Maybe.
+The `output` input (🤔) is optional. By default, the Action will replace the file in-place. If an `output` is specified, the original file will not be modified and instead the substitution will be outputted to a file at the specified path.
