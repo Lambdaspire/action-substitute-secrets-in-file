@@ -33,7 +33,7 @@ PREFERENCES_CURRENCY = Bitcoin
 
 ```yaml
 - name: Substitute Secrets
-  uses: Lambdaspire/action-substitute-secrets-in-file@v1.0.0
+  uses: Lambdaspire/action-substitute-secrets-in-file@v1.1.0
   with:
 
     # The (single) file to target.
